@@ -11,6 +11,8 @@
 ;; todo
 ;; 3. CSS
 ;; 4. Make it faster
+;; 5. Nav links - e.g. to next/prev day, next/prev month without having to come back up and out
+;; 6. Built in search? Would be some JS involved
 
 (def date-format (DateTimeFormatter/ofPattern "EEEE dd MMMM yyyy"))
 (def month-year-format (DateTimeFormatter/ofPattern "MMMM yyyy"))
@@ -73,6 +75,13 @@
     (io/make-parents target)
     (with-open [os (io/output-stream target)]
       (.write os (.getBytes content)))
+    target))
+
+(defn- archive-json [target-dir id json]
+  (let [target (io/file target-dir (format "%s.json" id))]
+    (io/make-parents target)
+    (with-open [os (io/output-stream target)]
+      (io/copy (m/encode m "application/json" json) os))
     target))
 
 (defn- entry-page [id caption comments year month day ^File image ^File video]
@@ -227,6 +236,8 @@
                                                                     (group-by :year)
                                                                     (sort-by first)
                                                                     vals))]
+
+     (archive-json target-dir "source" entries)
 
      {:page (archive-page target-dir "index" (home-page (partial relative target-dir) baby-name dob archived-years))
       :years archived-years})))
