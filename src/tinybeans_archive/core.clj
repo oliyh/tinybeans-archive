@@ -87,7 +87,7 @@
 (defn- entry-page [id caption comments year month day ^File image ^File video]
   (html5
    [:div.entry-page
-    [:a.back {:href ".."} (.format (LocalDate/of year month day) date-format)]
+    [:a.back {:href "../index.html"} (.format (LocalDate/of year month day) date-format)]
     [:h1.date (.format (LocalDate/of year month day) date-format)]
     [:p.caption caption]
     (if video
@@ -124,7 +124,7 @@
 (defn- day-page [relative year month day entries]
   (html5
    [:div.day-page
-    [:a.back {:href ".."} (.format (LocalDate/of year month day) month-format)]
+    [:a.back {:href "../index.html"} (.format (LocalDate/of year month day) month-format)]
     [:h1.date (.format (LocalDate/of year month day) date-format)]
     [:div.entries
      (for [{:keys [page caption comments large-image video]} entries]
@@ -159,7 +159,7 @@
 (defn- month-page [relative year month days]
   (html5
    [:div.month-page
-    [:a.back {:href ".."} year]
+    [:a.back {:href "../index.html"} year]
     [:h1.date (.format (LocalDate/of year month 1) month-year-format)]
     [:div.entries
      (for [{:keys [day page entries]} (sort-by :day days)
@@ -185,7 +185,7 @@
 (defn- year-page [relative year months]
   (html5
    [:div.year-page
-    [:a.back {:href ".."} "Home"]
+    [:a.back {:href "../index.html"} "Home"]
     [:h1.date year]
     [:div.entries
      (for [{:keys [month page days]} (sort-by :month months)
