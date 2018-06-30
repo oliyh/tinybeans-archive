@@ -32,14 +32,15 @@
    first))
 
 (defn- journal-shards [journal]
-  (let [dob ^LocalDate (->> journal :children first :dob LocalDate/parse)
+  (let [birth-month ^LocalDate (.withDayOfMonth (->> journal :children first :dob LocalDate/parse) 1)
         now (LocalDate/now)]
-    (->> (iterate (fn [d] (.plusMonths d 1)) dob)
+    (->> (iterate (fn [d] (.plusMonths d 1)) birth-month)
          (take-while (fn [d] (.isAfter now d)))
          (map (fn [d] {:year (.getYear d)
                        :month (.getMonthValue d)})))))
 
 (defn- fetch-entries [api-key journal-id {:keys [year month]}]
+  (println (format "Fetching %s-%s" year month))
   (->>
    (http/get (format "https://tinybeans.com/api/1/journals/%s/entries?month=%s&year=%s&idsOnly=true"
                      journal-id
@@ -105,21 +106,24 @@
         [:span (:firstName user)]])]]))
 
 (defn- archive-entry [target-dir {:keys [id caption comments day month year blobs attachmentUrl_mp4] :as entry}]
-  (let [target-dir (io/file target-dir (str id))]
-    (let [original-image (archive-image target-dir id (:p blobs) "")
-          large-image (archive-image target-dir id (:l blobs) "_large")
-          thumb-image (archive-image target-dir id (:s2 blobs) "_thumb")
-          video (archive-video target-dir id attachmentUrl_mp4)
-          page (archive-page target-dir id (entry-page id caption comments year month day original-image video))]
+  (try
+    (let [target-dir (io/file target-dir (str id))]
+      (let [original-image (archive-image target-dir id (:p blobs) "")
+            large-image (archive-image target-dir id (:l blobs) "_large")
+            thumb-image (archive-image target-dir id (:s2 blobs) "_thumb")
+            video (archive-video target-dir id attachmentUrl_mp4)
+            page (archive-page target-dir id (entry-page id caption comments year month day original-image video))]
 
-      (merge
-       (select-keys entry [:id :year :month :day :caption :comments])
-       {:page page
-        :original-image original-image
-        :thumb-image thumb-image
-        :large-image large-image}
-       (when video
-         {:video video})))))
+        (merge
+         (select-keys entry [:id :year :month :day :caption :comments])
+         {:page page
+          :original-image original-image
+          :thumb-image thumb-image
+          :large-image large-image}
+         (when video
+           {:video video}))))
+    (catch Exception e
+      (println "Unable to archive entry" entry e))))
 
 (defn- day-page [relative year month day entries]
   (html5
@@ -151,7 +155,7 @@
 (defn- archive-day [target-dir entries]
   (let [{:keys [year month day]} (first entries)
         target-dir (io/file target-dir (str day))
-        archived-entries (map (partial archive-entry target-dir) (sort-by :timestamp entries))]
+        archived-entries (keep (partial archive-entry target-dir) (sort-by :timestamp entries))]
     {:day day
      :page (archive-page target-dir "index" (day-page (partial relative target-dir) year month day archived-entries))
      :entries archived-entries}))
@@ -231,6 +235,7 @@
                 (fetch-entries api-key journal-id entry))
               (journal-shards journal)))))
   ([baby-name dob entries]
+   (println (format "Found %s entries for %s" (count entries) baby-name))
    (let [target-dir (io/file "archive")
          archived-years (map (partial archive-year target-dir) (->> entries
                                                                     (group-by :year)
