@@ -155,7 +155,7 @@
 (defn- archive-day [target-dir entries]
   (let [{:keys [year month day]} (first entries)
         target-dir (io/file target-dir (str day))
-        archived-entries (keep (partial archive-entry target-dir) (sort-by :timestamp entries))]
+        archived-entries (remove nil? (pmap (partial archive-entry target-dir) (sort-by :timestamp entries)))]
     {:day day
      :page (archive-page target-dir "index" (day-page (partial relative target-dir) year month day archived-entries))
      :entries archived-entries}))
@@ -177,10 +177,10 @@
 (defn- archive-month [target-dir entries]
   (let [{:keys [year month]} (first entries)
         target-dir (io/file target-dir (str month))
-        archived-days (map (partial archive-day target-dir) (->> entries
-                                                                 (group-by :day)
-                                                                 (sort-by first)
-                                                                 vals))]
+        archived-days (pmap (partial archive-day target-dir) (->> entries
+                                                                  (group-by :day)
+                                                                  (sort-by first)
+                                                                  vals))]
 
     {:month month
      :page (archive-page target-dir "index" (month-page (partial relative target-dir) year month archived-days))
@@ -225,19 +225,19 @@
          [:img.photo {:src (relative thumb-image)}]]])]]))
 
 (defn archive
-  ([api-key journal-id]
+  ([target-dir api-key journal-id]
    (let [journal (fetch-journal api-key journal-id)
          child (->> journal :children first)]
      (archive
+      target-dir
       (:firstName child)
       (:dob child)
       (mapcat (fn [entry]
                 (fetch-entries api-key journal-id entry))
               (journal-shards journal)))))
-  ([baby-name dob entries]
+  ([target-dir baby-name dob entries]
    (println (format "Found %s entries for %s" (count entries) baby-name))
-   (let [target-dir (io/file "archive")
-         archived-years (map (partial archive-year target-dir) (->> entries
+   (let [archived-years (map (partial archive-year target-dir) (->> entries
                                                                     (group-by :year)
                                                                     (sort-by first)
                                                                     vals))]
