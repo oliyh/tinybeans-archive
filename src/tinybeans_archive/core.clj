@@ -5,7 +5,7 @@
             [clojure.java.io :as io]
             [hiccup.page :refer [html5]])
   (:import [java.io File]
-           [java.time LocalDate]
+           [java.time LocalDate Instant]
            [java.time.format DateTimeFormatter]))
 
 ;; todo
@@ -17,6 +17,7 @@
 (def date-format (DateTimeFormatter/ofPattern "EEEE dd MMMM yyyy"))
 (def month-year-format (DateTimeFormatter/ofPattern "MMMM yyyy"))
 (def month-format (DateTimeFormatter/ofPattern "MMMM"))
+(def iso-date-format (DateTimeFormatter/ofPattern "YYYY-MM-dd"))
 
 (def m (m/create))
 
@@ -232,9 +233,14 @@
       target-dir
       (:firstName child)
       (:dob child)
-      (mapcat (fn [entry]
-                (fetch-entries api-key journal-id entry))
-              (journal-shards journal)))))
+      (->> (journal-shards journal)
+           (mapcat (fn [entry]
+                     (fetch-entries api-key journal-id entry)))
+           (map (fn [{:keys [timestamp] :as entry}]
+                  (assoc entry :iso-date
+                         (.format (.toLocalDate (.atZone (Instant/ofEpochMilli timestamp)
+                                                         (java.time.ZoneId/of "UTC")))
+                                  iso-date-format))))))))
   ([target-dir baby-name dob entries]
    (println (format "Found %s entries for %s" (count entries) baby-name))
    (let [archived-years (map (partial archive-year target-dir) (->> entries
@@ -246,3 +252,18 @@
 
      {:page (archive-page target-dir "index" (home-page (partial relative target-dir) baby-name dob archived-years))
       :years archived-years})))
+
+(defn uber-page [json-path target-dir]
+  (let [json (m/decode m "application/json" (slurp (io/file json-path)))
+        html (html5
+              [:div.uber-page
+               [:div.entries
+                (for [[[year month day] entries] (->> (group-by (juxt :year :month :day) json)
+                                                      (sort-by first))]
+                  [:div
+                   [:h6 (.format (LocalDate/of year month day) iso-date-format)]
+                   (for [{:keys [thumb-image id]} (sort-by :timestamp entries)]
+                     [:span.entry {:style "margin: 2px;"}
+                      [:a {:href (format "%s/%s/%s/%s/%s.html" year month day id id)}
+                       [:img.photo {:src (format "%s/%s/%s/%s/%s_thumb.jpg" year month day id id)}]]])])]])]
+    (spit (io/file target-dir "uber-page.html") html)))
