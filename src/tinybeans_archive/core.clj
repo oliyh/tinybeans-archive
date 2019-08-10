@@ -1,6 +1,5 @@
 (ns tinybeans-archive.core
-  (:require [urania.core :as u]
-            [muuntaja.core :as m]
+  (:require [muuntaja.core :as m]
             [clj-http.client :as http]
             [clojure.java.io :as io]
             [hiccup.page :refer [html5]])
