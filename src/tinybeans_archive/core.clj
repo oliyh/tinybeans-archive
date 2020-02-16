@@ -53,13 +53,14 @@
    :entries))
 
 (defn- archive-image [target-dir id url suffix]
-  (let [target (io/file target-dir (format "%s%s.jpg" id suffix))]
-    (when-not (.exists target)
-      (let [img (-> (http/get url {:as :byte-array}) :body)]
-        (io/make-parents target)
-        (with-open [os (io/output-stream target)]
-          (.write os img))))
-    target))
+  (when url
+    (let [target (io/file target-dir (format "%s%s.jpg" id suffix))]
+      (when-not (.exists target)
+        (let [img (-> (http/get url {:as :byte-array}) :body)]
+          (io/make-parents target)
+          (with-open [os (io/output-stream target)]
+            (.write os img))))
+      target)))
 
 (defn- archive-video [target-dir id url]
   (when url
@@ -92,13 +93,14 @@
     [:h1.date (.format (LocalDate/of year month day) date-format)]
     [:p.caption caption]
     (if video
-      [:video {:controls true
-               :preload "none"
-               :width "100%"
-               :poster (.getName image)}
+      [:video (merge {:controls true
+                      :preload "none"
+                      :width "100%"}
+                     (when image
+                       {:poster (.getName image)}))
        [:source {:type "video/mp4"
                  :src (.getName video)}]]
-      [:img.photo {:src (.getName image)}])
+      (when image [:img.photo {:src (.getName image)}]))
     [:div.comments
      (for [{:keys [details user]} comments]
        [:div.comment
@@ -136,13 +138,15 @@
         [:a {:href (relative page)}
          [:h3 caption]
          (if video
-           [:video {:controls true
-                    :preload "none"
-                    :width "100%"
-                    :poster (relative large-image)}
+           [:video (merge {:controls true
+                           :preload "none"
+                           :width "100%"}
+                          (when large-image
+                            {:poster (relative large-image)}))
             [:source {:type "video/mp4"
                       :src (relative video)}]]
-           [:img.photo {:src (relative large-image)}])
+           (when large-image
+             [:img.photo {:src (relative large-image)}]))
          [:div.comments
           (for [{:keys [details user]} comments]
             [:div.comment
@@ -171,7 +175,8 @@
        [:div.entry
         [:a {:href (relative page)}
          [:span.date (str day)]
-         [:img.photo {:src (relative thumb-image)}]
+         (when thumb-image
+           [:img.photo {:src (relative thumb-image)}])
          [:span.entry-count (count entries) " moments"]]])]]))
 
 (defn- archive-month [target-dir entries]
@@ -197,7 +202,8 @@
        [:div.entry
         [:a {:href (relative page)}
          [:span.date (.format (LocalDate/of year month 1) month-format)]
-         [:img.photo {:src (relative thumb-image)}]]])]]))
+         (when thumb-image
+           [:img.photo {:src (relative thumb-image)}])]])]]))
 
 (defn- archive-year [target-dir entries]
   (let [{:keys [year]} (first entries)
@@ -222,7 +228,8 @@
        [:div.entry
         [:a {:href (relative page)}
          [:span.date (str year)]
-         [:img.photo {:src (relative thumb-image)}]]])]]))
+         (when thumb-image
+           [:img.photo {:src (relative thumb-image)}])]])]]))
 
 (defn archive
   ([target-dir api-key journal-id]
