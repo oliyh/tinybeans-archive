@@ -2,6 +2,7 @@
   (:require [muuntaja.core :as m]
             [clj-http.client :as http]
             [clojure.java.io :as io]
+            [clojure.string :as str]
             [hiccup.page :refer [html5]])
   (:import [java.io File]
            [java.time LocalDate Instant]
@@ -107,7 +108,7 @@
         [:p details]
         [:span (:firstName user)]])]]))
 
-(defn- archive-entry [target-dir {:keys [id caption comments day month year blobs attachmentUrl_mp4] :as entry}]
+(defn- archive-entry [target-dir {:keys [id caption comments day month year blobs attachmentUrl_mp4 children orientation] :as entry}]
   (try
     (let [target-dir (io/file target-dir (str id))]
       (let [original-image (archive-image target-dir id (:p blobs) "")
@@ -121,7 +122,9 @@
          {:page page
           :original-image original-image
           :thumb-image thumb-image
-          :large-image large-image}
+          :large-image large-image
+          :child-ids (mapv :childId children)
+          :orientation orientation}
          (when video
            {:video video}))))
     (catch Exception e
@@ -231,14 +234,86 @@
          (when thumb-image
            [:img.photo {:src (relative thumb-image)}])]])]]))
 
+(defn- app-comment [{:keys [details user]}]
+  {:t (or details "") :n (or (:firstName user) "")})
+
+(defn- app-entry
+  "Builds the compact per-entry record used by the enhanced app, or nil if
+   the entry has no downloaded thumbnail (e.g. failed download, text-only entry)."
+  [target-dir {:keys [id year month day caption children orientation attachmentUrl_mp4 comments]}]
+  (let [thumb-file (io/file target-dir (str year) (str month) (str day) (str id) (format "%s_thumb.jpg" id))]
+    (when (.exists thumb-file)
+      {:id id
+       :y year :m month :d day
+       :c (or caption "")
+       :k (mapv :childId children)
+       :o orientation
+       :v (boolean attachmentUrl_mp4)
+       :cs (mapv app-comment comments)})))
+
+(defn- write-app-data! [target-dir kids entries]
+  (let [file (io/file target-dir "app" "app-data.js")]
+    (io/make-parents file)
+    (with-open [os (io/output-stream file)]
+      (.write os (.getBytes "window.ARCHIVE_DATA = "))
+      (io/copy (m/encode m "application/json" {:kids kids :entries entries}) os)
+      (.write os (.getBytes ";\n")))))
+
+(defn- copy-site-assets! [target-dir version]
+  (doseq [f ["app.css" "app.js"]]
+    (let [target (io/file target-dir "app" f)]
+      (io/make-parents target)
+      (with-open [in (io/input-stream (io/resource (str "site/" f)))
+                  out (io/output-stream target)]
+        (io/copy in out))))
+  (let [index-target (io/file target-dir "app" "index.html")
+        index-html (slurp (io/resource "site/index.html"))
+        cache-busted (-> index-html
+                          (str/replace "app.css\"" (str "app.css?v=" version "\""))
+                          (str/replace "app.js\"" (str "app.js?v=" version "\""))
+                          (str/replace "app-data.js\"" (str "app-data.js?v=" version "\"")))]
+    (io/make-parents index-target)
+    (spit index-target cache-busted)))
+
+(defn generate-site!
+  "Generates the enhanced browsing app (calendar, search, megawall, gallery
+   wall) alongside the existing static archive. Does not touch the existing
+   per-day/month/year/entry pages. `entries` are the flat, raw entry maps
+   (as fetched from the API, or decoded from a previously-written
+   source.json) - i.e. before archive-entry has trimmed/transformed them."
+  [target-dir kids entries]
+  (let [target-dir (io/file target-dir)
+        version (System/currentTimeMillis)
+        app-entries (->> entries
+                         (keep (partial app-entry target-dir))
+                         (sort-by (juxt :y :m :d :id)))]
+    (println (format "Generating app for %s entries" (count app-entries)))
+    (copy-site-assets! target-dir version)
+    (write-app-data! target-dir kids app-entries)))
+
+(defn resite!
+  "Regenerates just the enhanced app from a previously-run archive's
+   source.json (and children.json, if present), without re-fetching
+   anything from the Tinybeans API. Useful when tweaking the app itself."
+  [target-dir]
+  (let [target-dir (io/file target-dir)
+        entries (m/decode m "application/json" (slurp (io/file target-dir "source.json")))
+        children-file (io/file target-dir "children.json")
+        kids (if (.exists children-file)
+               (m/decode m "application/json" (slurp children-file))
+               [])]
+    (generate-site! target-dir kids entries)))
+
 (defn archive
   ([target-dir api-key journal-id]
    (let [journal (fetch-journal api-key journal-id)
-         child (->> journal :children first)]
+         child (->> journal :children first)
+         kids (mapv (fn [c] {:id (:id c) :name (:firstName c) :dob (:dob c)}) (:children journal))]
      (archive
       target-dir
       (:firstName child)
       (:dob child)
+      kids
       (->> (journal-shards journal)
            (mapcat (fn [entry]
                      (fetch-entries api-key journal-id entry)))
@@ -247,14 +322,17 @@
                          (.format (.toLocalDate (.atZone (Instant/ofEpochMilli timestamp)
                                                          (java.time.ZoneId/of "UTC")))
                                   iso-date-format))))))))
-  ([target-dir baby-name dob entries]
+  ([target-dir baby-name dob kids entries]
    (println (format "Found %s entries for %s" (count entries) baby-name))
-   (let [archived-years (map (partial archive-year target-dir) (->> entries
-                                                                    (group-by :year)
-                                                                    (sort-by first)
-                                                                    vals))]
+   (let [entries (vec entries)
+         archived-years (map (partial archive-year target-dir) (->> entries
+                                                                     (group-by :year)
+                                                                     (sort-by first)
+                                                                     vals))]
 
      (archive-json target-dir "source" entries)
+     (archive-json target-dir "children" kids)
+     (generate-site! target-dir kids entries)
 
      {:page (archive-page target-dir "index" (home-page (partial relative target-dir) baby-name dob archived-years))
       :years archived-years})))

@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Family Archive</title>
+<link rel="stylesheet" href="app.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="topbar-inner">
+      <a class="brand" href="#/calendar" id="brand-link">Family Archive</a>
+      <nav class="tabs" id="tabs">
+        <a data-route="calendar" href="#/calendar">Calendar</a>
+        <a data-route="wall" href="#/wall">Wall</a>
+        <a data-route="gallery" href="#/gallery">Gallery</a>
+      </nav>
+      <div class="topbar-actions">
+        <div class="popover-control" id="search-control">
+          <button type="button" class="popover-toggle icon-toggle" id="search-toggle" aria-label="Search">
+            <span aria-hidden="true">&#128269;</span>
+          </button>
+          <div class="popover-panel search-popover" id="search-popover" hidden>
+            <div class="popover-section">
+              <h2>Jump to a date</h2>
+              <div class="date-jump-row">
+                <input type="date" id="date-jump-input">
+                <button type="button" class="go-btn" id="date-jump-go">Go</button>
+              </div>
+            </div>
+            <div class="popover-section">
+              <h2>Search captions</h2>
+              <input type="search" id="caption-search-input" placeholder="e.g. beach, birthday, first steps&hellip;">
+              <div class="type-filter" id="type-filter">
+                <button type="button" data-type="all" class="active">All</button>
+                <button type="button" data-type="photo">Photos</button>
+                <button type="button" data-type="video">Videos</button>
+              </div>
+              <div class="search-hint" id="search-count"></div>
+            </div>
+            <div class="search-results" id="search-results"></div>
+          </div>
+        </div>
+        <div class="popover-control" id="kid-filter">
+          <button type="button" class="popover-toggle" id="kid-filter-toggle">
+            <span id="kid-filter-label">Everyone</span>
+            <span class="chev">&#9662;</span>
+          </button>
+          <div class="popover-panel kid-filter-popover" id="kid-filter-panel" hidden>
+            <div class="kid-filter-checks" id="kid-filter-checks"></div>
+            <label class="kid-filter-exact">
+              <input type="checkbox" id="kid-filter-exact-input">
+              Only these (exclude anyone else tagged)
+            </label>
+            <button type="button" class="kid-filter-clear" id="kid-filter-clear">Clear</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </header>
+  <main id="view" aria-live="polite"></main>
+  <script src="app-data.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
