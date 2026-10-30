@@ -34,6 +34,24 @@ without re-fetching anything from Tinybeans, run:
 lein archive resite <archive-dir>
 ```
 
+## Docker
+
+Build the image, then run it with the API key and journal id as environment
+variables and a volume for the archive:
+
+```bash
+docker build -t tinybeans-archive .
+docker run --rm \
+  -e TINYBEANS_API_KEY=<api-key> \
+  -e TINYBEANS_JOURNAL_ID=<journal-id> \
+  -v /path/to/archive:/archive \
+  tinybeans-archive
+```
+
+Existing files are skipped, so it's safe to run repeatedly. To run it
+periodically on a Synology NAS, add the `docker run` command as a user-defined
+script in Control Panel &rarr; Task Scheduler.
+
 ## License
 
 Copyright © 2018 oliyh
