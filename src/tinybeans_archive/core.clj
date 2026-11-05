@@ -332,10 +332,15 @@
 
      (archive-json target-dir "source" entries)
      (archive-json target-dir "children" kids)
-     (generate-site! target-dir kids entries)
 
-     {:page (archive-page target-dir "index" (home-page (partial relative target-dir) baby-name dob archived-years))
-      :years archived-years})))
+     ;; archived-years is lazy: building the home page is what forces every
+     ;; year/month/day/entry to be archived (and its images downloaded), so it
+     ;; must happen before generate-site!, which looks for the downloaded thumbs.
+     (let [home (archive-page target-dir "index" (home-page (partial relative target-dir) baby-name dob archived-years))
+           years (doall archived-years)]
+       (generate-site! target-dir kids entries)
+       {:page home
+        :years years}))))
 
 (defn uber-page [json-path target-dir]
   (let [json (m/decode m "application/json" (slurp (io/file json-path)))
