@@ -52,6 +52,18 @@ Existing files are skipped, so it's safe to run repeatedly. To run it
 periodically on a Synology NAS, add the `docker run` command as a user-defined
 script in Control Panel &rarr; Task Scheduler.
 
+To serve the generated site on your network, `docker-compose.yml` runs a small
+nginx container with the archive mounted read-only:
+
+```bash
+ARCHIVE_DIR=/path/to/archive docker compose up -d
+```
+
+The site is then at `http://<host>:8080/app/index.html`. On a Synology NAS,
+create a Container Manager project from this file and set the volume path to
+the archive's full path (e.g. `/volume1/homes/<user>/photos`), as the folder
+picker only lists shared folders.
+
 ## License
 
 Copyright © 2018 oliyh

@@ -1,0 +1,9 @@
+services:
+  site:
+    image: nginx:alpine
+    container_name: tinybeans-site
+    restart: unless-stopped
+    ports:
+      - "8080:80"
+    volumes:
+      - ${ARCHIVE_DIR:-./archive}:/usr/share/nginx/html:ro
