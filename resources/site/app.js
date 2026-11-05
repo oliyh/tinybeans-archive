@@ -383,7 +383,7 @@
     observeLazy(view);
   }
 
-  // ---------------- calendar: days (real calendar grid) ----------------
+  // ---------------- calendar: days (card grid) ----------------
 
   function renderDays(year, month) {
     var entries = filteredEntries().filter(function (e) { return e.y === year && e.m === month; });
@@ -393,26 +393,24 @@
       '<a href="#/calendar/' + year + '">' + year + '</a> / ' + MONTH_NAMES[month - 1] + '</div>' +
       '<h1>' + MONTH_NAMES[month - 1] + ' ' + year + '</h1></div></div>';
 
-    var firstDow = new Date(year, month - 1, 1).getDay();
-    var daysInMonth = new Date(year, month, 0).getDate();
+    var days = Array.from(byDay.keys()).sort(function (a, b) { return a - b; });
 
-    var cells = DOW_NAMES.map(function (n) { return '<div class="dow">' + n + '</div>'; }).join('');
-    for (var i = 0; i < firstDow; i++) cells += '<div class="day-cell blank"></div>';
-
-    for (var d = 1; d <= daysInMonth; d++) {
-      var group = byDay.get(d);
-      if (group && group.length) {
-        var rep = group[group.length - 1];
-        cells += '<a class="day-cell has-entries" href="#/calendar/' + year + '/' + month + '/' + d + '">' +
-          lazyImg(thumbSrc(rep)) +
-          '<span class="day-num">' + d + '</span>' +
-          '<span class="day-count">' + group.length + '</span></a>';
-      } else {
-        cells += '<div class="day-cell empty-day"><span class="day-num">' + d + '</span></div>';
-      }
+    if (!days.length) {
+      view.appendChild(h(header + '<div class="empty-state">No entries match the current filter.</div>'));
+      return;
     }
 
-    view.appendChild(h(header + '<div class="month-calendar">' + cells + '</div>'));
+    var cards = days.map(function (d) {
+      var group = byDay.get(d);
+      var rep = group[group.length - 1];
+      var dow = DOW_NAMES[new Date(year, month - 1, d).getDay()];
+      return '<a class="period-card" href="#/calendar/' + year + '/' + month + '/' + d + '">' +
+        '<div class="thumb-wrap">' + lazyImg(thumbSrc(rep)) + '</div>' +
+        '<div class="period-meta"><span class="period-label">' + dow + ' ' + d + ' ' + MONTH_NAMES[month - 1].slice(0, 3) + '</span>' +
+        '<span class="period-count">' + group.length + '</span></div></a>';
+    }).join('');
+
+    view.appendChild(h(header + '<div class="card-grid">' + cards + '</div>'));
     observeLazy(view);
   }
 

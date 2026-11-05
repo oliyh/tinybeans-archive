@@ -242,6 +242,10 @@ button { font: inherit; }
   transition: transform 0.15s ease;
 }
 
+@media (max-width: 480px) {
+  .card-grid { grid-template-columns: repeat(2, 1fr); }
+}
+
 .period-card:hover { transform: translateY(-2px); }
 
 .period-card.disabled { opacity: 0.4; pointer-events: none; }
@@ -263,76 +267,6 @@ button { font: inherit; }
 
 .period-card .period-label { font-weight: 600; }
 .period-card .period-count { font-size: 0.78rem; color: var(--text-soft); }
-
-/* real month calendar */
-
-.month-calendar {
-  display: grid;
-  grid-template-columns: repeat(7, 1fr);
-  gap: 8px;
-}
-
-.dow {
-  text-align: center;
-  font-size: 0.72rem;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  color: var(--text-soft);
-  padding-bottom: 4px;
-}
-
-.day-cell {
-  display: block;
-  aspect-ratio: 1 / 1;
-  border-radius: 12px;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  overflow: hidden;
-  position: relative;
-}
-
-.day-cell.blank { background: transparent; border: none; }
-
-.day-cell.has-entries {
-  cursor: pointer;
-  box-shadow: var(--shadow);
-}
-
-.day-cell.has-entries:hover { transform: translateY(-2px); }
-
-.day-cell img { width: 100%; height: 100%; object-fit: cover; opacity: 0.85; }
-
-.day-cell .day-num {
-  position: absolute;
-  top: 4px;
-  left: 6px;
-  font-size: 0.75rem;
-  font-weight: 700;
-  color: #fff;
-  text-shadow: 0 1px 3px rgba(0,0,0,0.6);
-}
-
-.day-cell.empty-day .day-num {
-  position: static;
-  color: var(--text-soft);
-  text-shadow: none;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  height: 100%;
-  font-weight: 400;
-}
-
-.day-cell .day-count {
-  position: absolute;
-  bottom: 4px;
-  right: 6px;
-  background: rgba(0,0,0,0.45);
-  color: #fff;
-  font-size: 0.68rem;
-  padding: 1px 6px;
-  border-radius: 999px;
-}
 
 /* day entries view */
 
