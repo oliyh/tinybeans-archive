@@ -328,6 +328,57 @@ button { font: inherit; }
 .entry-card .entry-body:empty { display: none; }
 .entry-card .caption:last-child { margin-bottom: 0; }
 
+.feed-list { max-width: 560px; margin: 0 auto; }
+.feed-notice {
+  max-width: 560px;
+  margin: 0 auto 16px;
+  padding: 10px 14px;
+  border-radius: 12px;
+  background: var(--surface-alt);
+  color: var(--text-soft);
+  font-size: 0.88rem;
+  text-align: center;
+}
+
+.feed-notice-new { background: var(--accent-blue); color: #2c3e46; font-weight: 600; }
+
+.feed-day {
+  font-size: 0.95rem;
+  margin: 24px 0 10px;
+  color: var(--text-soft);
+  font-weight: 600;
+}
+
+.feed-divider {
+  margin: 28px 0 0;
+  padding-top: 14px;
+  border-top: 2px dashed var(--border);
+  text-align: center;
+  font-size: 0.8rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-soft);
+}
+
+.feed-list .entry-card { margin-bottom: 18px; }
+
+.card-when {
+  font-size: 0.78rem;
+  color: var(--text-soft);
+  margin-bottom: 8px;
+}
+
+.feed-new-badge {
+  display: inline-block;
+  margin-right: 8px;
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: var(--accent-pink);
+  color: #5a3a3f;
+  font-weight: 600;
+  font-size: 0.7rem;
+}
+
 .kid-tag {
   font-size: 0.72rem;
   padding: 2px 9px;

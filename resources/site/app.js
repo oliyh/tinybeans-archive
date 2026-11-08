@@ -310,6 +310,8 @@
       else if (parts.length === 2) renderMonths(Number(parts[1]));
       else if (parts.length === 3) renderDays(Number(parts[1]), Number(parts[2]));
       else renderDayEntries(Number(parts[1]), Number(parts[2]), Number(parts[3]));
+    } else if (route === 'feed') {
+      renderFeed();
     } else if (route === 'wall') {
       renderWall();
     } else if (route === 'gallery') {
@@ -452,27 +454,138 @@
       return;
     }
 
-    var cards = dayEntries.map(function (e) {
-      var media = e.v
-        ? '<div class="media-wrap">' + lazyImg(largeSrc(e)) + '<div class="play-badge">&#9658;</div></div>'
-        : '<div class="media-wrap">' + lazyImg(largeSrc(e)) + '</div>';
-      var commentCount = (e.cs || []).length;
-      var tags = kidTagsHtml(e);
-      var badge = commentCount
-        ? '<span class="comment-count" title="' + commentCount + (commentCount === 1 ? ' comment' : ' comments') + '">' +
-          '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
-          '<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>' +
-          commentCount + '</span>'
-        : '';
-      var meta = (tags || badge) ? '<div class="card-meta">' + tags + badge + '</div>' : '';
-      return '<a class="entry-card" href="' + photoHref(e) + '">' + media +
-        '<div class="entry-body">' + meta +
-        (e.c ? '<p class="caption">' + esc(e.c) + '</p>' : '') +
-        '</div></a>';
-    }).join('');
+    var cards = dayEntries.map(function (e) { return entryCardHtml(e); }).join('');
 
     view.appendChild(h(header + nav + '<div class="entry-masonry">' + cards + '</div>'));
     observeLazy(view);
+  }
+
+  function entryCardHtml(e, whenLine) {
+    var media = e.v
+      ? '<div class="media-wrap">' + lazyImg(largeSrc(e)) + '<div class="play-badge">&#9658;</div></div>'
+      : '<div class="media-wrap">' + lazyImg(largeSrc(e)) + '</div>';
+    var commentCount = (e.cs || []).length;
+    var tags = kidTagsHtml(e);
+    var badge = commentCount
+      ? '<span class="comment-count" title="' + commentCount + (commentCount === 1 ? ' comment' : ' comments') + '">' +
+        '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
+        '<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>' +
+        commentCount + '</span>'
+      : '';
+    var meta = (tags || badge) ? '<div class="card-meta">' + tags + badge + '</div>' : '';
+    return '<a class="entry-card" href="' + photoHref(e) + '">' + media +
+      '<div class="entry-body">' +
+      (whenLine ? '<div class="card-when">' + whenLine + '</div>' : '') +
+      meta +
+      (e.c ? '<p class="caption">' + esc(e.c) + '</p>' : '') +
+      '</div></a>';
+  }
+
+  // ---------------- feed ----------------
+
+  var FEED_SEEN_KEY = 'archive-feed-seen';
+  var feedBaseline; // value of FEED_SEEN_KEY when this page loaded; kept stable so a re-render doesn't lose "new"
+
+  function readFeedSeen() {
+    try {
+      var v = Number(localStorage.getItem(FEED_SEEN_KEY));
+      return v > 0 ? v : 0;
+    } catch (err) { return 0; }
+  }
+
+  function writeFeedSeen(v) {
+    try { localStorage.setItem(FEED_SEEN_KEY, String(v)); } catch (err) { /* ignore */ }
+  }
+
+  function startOfDay(ms) {
+    var d = new Date(ms);
+    return new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+  }
+
+  function feedDayLabel(ms) {
+    var days = Math.round((startOfDay(Date.now()) - startOfDay(ms)) / 86400000);
+    if (days === 0) return 'Today';
+    if (days === 1) return 'Yesterday';
+    var d = new Date(ms);
+    return DOW_NAMES[d.getDay()] + ' ' + d.getDate() + ' ' + MONTH_NAMES[d.getMonth()] + ' ' + d.getFullYear();
+  }
+
+  function feedTime(ms) {
+    var d = new Date(ms);
+    return (d.getHours() < 10 ? '0' : '') + d.getHours() + ':' + (d.getMinutes() < 10 ? '0' : '') + d.getMinutes();
+  }
+
+  function renderFeed() {
+    var pool = filteredEntries().filter(function (e) { return e.u; })
+      .sort(function (a, b) { return b.u - a.u || b.id - a.id; });
+
+    if (feedBaseline === undefined) feedBaseline = readFeedSeen();
+    var baseline = feedBaseline;
+
+    var newest = ENTRIES.reduce(function (max, e) { return e.u > max ? e.u : max; }, 0);
+    if (newest > baseline) writeFeedSeen(newest);
+
+    var newCount = baseline ? pool.filter(function (e) { return e.u > baseline; }).length : 0;
+
+    var notice = '';
+    if (baseline) {
+      notice = newCount
+        ? '<div class="feed-notice feed-notice-new">' + newCount + ' new since you last looked</div>'
+        : '<div class="feed-notice">You\'re all caught up</div>';
+    }
+
+    view.appendChild(h('<div class="view-header"><h1>Feed</h1><span class="crumbs">Newest uploads first</span></div>' +
+      notice + '<div class="feed-list" id="feed-list"></div>' +
+      '<div class="wall-sentinel" id="feed-sentinel"></div><div class="wall-status" id="feed-status"></div>'));
+
+    var listEl = document.getElementById('feed-list');
+    var statusEl = document.getElementById('feed-status');
+    var sentinel = document.getElementById('feed-sentinel');
+    var BATCH = 20;
+    var rendered = 0;
+    var lastDay = null;
+    var dividerDone = !(baseline && newCount);
+
+    if (!pool.length) {
+      statusEl.textContent = 'No entries match the current filter.';
+      return;
+    }
+
+    function appendBatch() {
+      var next = pool.slice(rendered, rendered + BATCH);
+      if (!next.length) {
+        statusEl.textContent = "That's everything.";
+        if (wallObserver) { wallObserver.disconnect(); wallObserver = null; }
+        return;
+      }
+      var html = '';
+      next.forEach(function (e) {
+        if (!dividerDone && e.u <= baseline) {
+          html += '<div class="feed-divider">Earlier</div>';
+          dividerDone = true;
+          lastDay = null;
+        }
+        var day = startOfDay(e.u);
+        if (day !== lastDay) {
+          html += '<h2 class="feed-day">' + esc(feedDayLabel(e.u)) + '</h2>';
+          lastDay = day;
+        }
+        var isNew = baseline && e.u > baseline;
+        var when = (isNew ? '<span class="feed-new-badge">New</span>' : '') +
+          'Added ' + feedTime(e.u) + ' &middot; from ' + dateLabel(e.y, e.m, e.d);
+        html += entryCardHtml(e, when);
+      });
+      listEl.insertAdjacentHTML('beforeend', html);
+      observeLazy(listEl);
+      rendered += next.length;
+      statusEl.textContent = 'Showing ' + rendered + ' of ' + pool.length;
+    }
+
+    appendBatch();
+    wallObserver = new IntersectionObserver(function (entriesObserved) {
+      if (entriesObserved.some(function (en) { return en.isIntersecting; })) appendBatch();
+    }, { rootMargin: '600px' });
+    wallObserver.observe(sentinel);
   }
 
   // ---------------- single photo ----------------

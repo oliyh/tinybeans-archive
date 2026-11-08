@@ -240,11 +240,13 @@
 (defn- app-entry
   "Builds the compact per-entry record used by the enhanced app, or nil if
    the entry has no downloaded thumbnail (e.g. failed download, text-only entry)."
-  [target-dir {:keys [id year month day caption children orientation attachmentUrl_mp4 comments]}]
+  [target-dir {:keys [id year month day caption children orientation attachmentUrl_mp4 comments
+                      lastUpdatedTimestamp timestamp]}]
   (let [thumb-file (io/file target-dir (str year) (str month) (str day) (str id) (format "%s_thumb.jpg" id))]
     (when (.exists thumb-file)
       {:id id
        :y year :m month :d day
+       :u (or lastUpdatedTimestamp timestamp)
        :c (or caption "")
        :k (mapv :childId children)
        :o orientation
