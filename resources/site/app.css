@@ -307,17 +307,32 @@ button { font: inherit; }
 .entry-card .caption { margin: 0 0 8px; line-height: 1.4; }
 .entry-card .kid-tags { display: flex; gap: 6px; margin-bottom: 8px; flex-wrap: wrap; }
 
+.entry-card .card-meta {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.entry-card .card-meta .kid-tags { margin-bottom: 0; }
+
+.comment-count {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: auto;
+  font-size: 0.78rem;
+  color: var(--text-soft);
+}
+
+.entry-card .entry-body:empty { display: none; }
+.entry-card .caption:last-child { margin-bottom: 0; }
+
 .kid-tag {
   font-size: 0.72rem;
   padding: 2px 9px;
   border-radius: 999px;
   color: #2c2c2c;
-}
-
-.entry-card .detail-link {
-  font-size: 0.82rem;
-  color: var(--accent-blue-deep);
-  border-bottom: 1px dotted currentColor;
 }
 
 /* ---------- single photo page ---------- */

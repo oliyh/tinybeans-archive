@@ -456,10 +456,19 @@
       var media = e.v
         ? '<div class="media-wrap">' + lazyImg(largeSrc(e)) + '<div class="play-badge">&#9658;</div></div>'
         : '<div class="media-wrap">' + lazyImg(largeSrc(e)) + '</div>';
+      var commentCount = (e.cs || []).length;
+      var tags = kidTagsHtml(e);
+      var badge = commentCount
+        ? '<span class="comment-count" title="' + commentCount + (commentCount === 1 ? ' comment' : ' comments') + '">' +
+          '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
+          '<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>' +
+          commentCount + '</span>'
+        : '';
+      var meta = (tags || badge) ? '<div class="card-meta">' + tags + badge + '</div>' : '';
       return '<a class="entry-card" href="' + photoHref(e) + '">' + media +
-        '<div class="entry-body">' + kidTagsHtml(e) +
+        '<div class="entry-body">' + meta +
         (e.c ? '<p class="caption">' + esc(e.c) + '</p>' : '') +
-        '<span class="detail-link">View comments &#8594;</span></div></a>';
+        '</div></a>';
     }).join('');
 
     view.appendChild(h(header + nav + '<div class="entry-masonry">' + cards + '</div>'));
